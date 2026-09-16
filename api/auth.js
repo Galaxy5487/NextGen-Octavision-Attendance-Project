@@ -1,4 +1,5 @@
 import supabase from './db-client.js';
+import { netlifyAdapter } from './_adapter.js';
 
 async function withAvatar(user) {
   const { password: _pw, ...safe } = user;
@@ -9,7 +10,7 @@ async function withAvatar(user) {
   return safe;
 }
 
-export default async function handler(req, res) {
+export async function mainHandler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -52,3 +53,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export default mainHandler;
+export const handler = netlifyAdapter(mainHandler);
+
