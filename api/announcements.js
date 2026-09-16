@@ -1,0 +1,39 @@
+import supabase from './db-client.js';
+import { notifyUsers, activeUserIds } from './_scores.js';
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  try {
+    if (req.method === 'GET') {
+      const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
+      const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(limit);
+      if (error) throw error;
+      return res.status(200).json(data || []);
+    }
+    if (req.method === 'POST') {
+      const { title, body, kind, created_by, audience } = req.body || {};
+      if (!title || !body) return res.status(400).json({ error: 'Title and body required' });
+      const { data, error } = await supabase.from('announcements').insert({
+        title, body, kind: kind || 'general', created_by: created_by || null, audience: audience || 'all',
+      }).select().single();
+      if (error) throw error;
+      const ids = await activeUserIds();
+      await notifyUsers(ids.filter((i) => i !== created_by), { title: `Announcement: ${title}`, body: body.slice(0, 140), kind: 'announcement', link: '#/app/announcements' });
+      return res.status(201).json(data);
+    }
+    if (req.method === 'DELETE') {
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const { error } = await supabase.from('announcements').delete().eq('id', id);
+      if (error) throw error;
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    console.error('announcements error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
