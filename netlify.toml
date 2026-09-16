@@ -1,12 +1,12 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  functions = "api"
+  functions = "netlify/functions"
 
-# Redirect /api/* to Netlify serverless functions
+# Redirect /api/* to Netlify serverless function api
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200
 
 # React Router SPA catch-all redirect
