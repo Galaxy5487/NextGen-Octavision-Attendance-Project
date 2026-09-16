@@ -1,5 +1,6 @@
 import supabase from './db-client.js';
 import { computeMonthStats, ensureSystemThread, notifyUsers, warningEmail, trySendEmail } from './_scores.js';
+import { netlifyAdapter } from './_adapter.js';
 
 async function upsertRow(employee_id, date, status, note, marked_by) {
   const { data: existing } = await supabase.from('attendance').select('id,status').eq('employee_id', employee_id).eq('date', date).limit(1);
@@ -41,7 +42,7 @@ async function issueAbsenceWarning(emp, date, marked_by) {
   return log;
 }
 
-export default async function handler(req, res) {
+export async function mainHandler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -112,3 +113,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export default mainHandler;
+export const handler = netlifyAdapter(mainHandler);
+
