@@ -27,11 +27,6 @@ export default function Login() {
     finally { setBusy(false); }
   };
 
-  const quick = (r: 'employee' | 'head', name: string, pw: string) => {
-    pickRole(r);
-    if (r === 'employee') setFullName(name);
-    setPassword(pw);
-  };
 
   return (
     <div className="min-h-dvh bg-zinc-950 text-white flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden">
@@ -122,19 +117,7 @@ export default function Login() {
               {busy ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
-          <div className="mt-6 pt-5 border-t border-zinc-100">
-            <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Quick demo access</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => quick('head', '', 'Shahid@10101')} className="text-left rounded-xl border border-zinc-200 p-3 hover:border-zinc-900 hover:bg-zinc-50 transition">
-                <p className="text-xs font-bold flex items-center gap-1.5"><ShieldCheck size={13} /> Team Head</p>
-                <p className="text-[11px] text-zinc-500 truncate mt-0.5">nextgenoctavision@…</p>
-              </button>
-              <button onClick={() => quick('employee', 'Ayesha Khan', 'Team@26')} className="text-left rounded-xl border border-zinc-200 p-3 hover:border-zinc-900 hover:bg-zinc-50 transition">
-                <p className="text-xs font-bold flex items-center gap-1.5"><User size={13} /> Employee</p>
-                <p className="text-[11px] text-zinc-500 truncate mt-0.5">octavisionteam@…</p>
-              </button>
-            </div>
-          </div>
+
         </motion.div>
       </div>
     </div>
