@@ -4,7 +4,7 @@ import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, User, Loader2 } from 'luci
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, error: authError, setError: setAuthError } = useAuth();
   const [role, setRole] = useState<'employee' | 'head'>('employee');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('octavisionteam@gmail.com');
@@ -14,14 +14,14 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
 
   const pickRole = (r: 'employee' | 'head') => {
-    setRole(r); setErr(null);
-    setEmail(r === 'employee' ? 'octavisionteam@gmail.com' : 'nextgenoctavision@gmail.com');
+    setRole(r); setErr(null); setAuthError(null);
+    setEmail(r === 'employee' ? 'octavisionteam@gmail.com' : '');
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (role === 'employee' && !fullName.trim()) { setErr('Please enter your Full Name.'); return; }
-    setErr(null); setBusy(true);
+    setErr(null); setAuthError(null); setBusy(true);
     try { await login(email.trim(), password, role === 'employee' ? fullName : undefined); }
     catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
@@ -111,7 +111,7 @@ export default function Login() {
                 </button>
               </div>
             </div>
-            {err && <p className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{err}</p>}
+            {(err || authError) && <p className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{err || authError}</p>}
             <button disabled={busy} className="w-full rounded-xl bg-zinc-900 text-white font-bold py-3 text-sm hover:bg-zinc-700 transition flex items-center justify-center gap-2 disabled:opacity-60">
               {busy ? <Loader2 size={17} className="animate-spin" /> : <LogIn size={17} />}
               {busy ? 'Signing in…' : 'Sign in'}
