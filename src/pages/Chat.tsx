@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Users, User, Plus, AlertTriangle, X, Trash2, Pencil, Search, MessageSquarePlus, Crown, Shield } from 'lucide-react';
+import { Send, Users, User, Plus, AlertTriangle, X, Trash2, Pencil, Search, MessageSquarePlus, Crown, Shield, Eraser } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import type { Thread, Message, Profile } from '../lib/types';
@@ -392,16 +392,27 @@ export default function Chat() {
                       : 'Direct message'}
                   </p>
                 </div>
-                {(isHead || String(activeThread.created_by) === String(user?.id)) &&
-                  activeThread.type === 'group' && (
+                <div className="flex items-center gap-1">
+                  {msgs.length > 0 && (
                     <button
-                      onClick={() => deleteThread(activeThread.id)}
-                      title="Delete group"
-                      className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition"
+                      onClick={clearChat}
+                      title="Clear Chat Messages"
+                      className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg border border-zinc-200 transition"
                     >
-                      <Trash2 size={16} />
+                      <Eraser size={14} /> Clear Chat
                     </button>
                   )}
+                  {(isHead || String(activeThread.created_by) === String(user?.id)) &&
+                    activeThread.type === 'group' && (
+                      <button
+                        onClick={() => deleteThread(activeThread.id)}
+                        title="Delete group"
+                        className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto scroll-thin p-4 sm:p-5 space-y-3 bg-[#fafafa]">
                 {msgs.map((m) => {
@@ -413,11 +424,22 @@ export default function Chat() {
                         key={m.id}
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="rounded-2xl border-2 border-red-200 bg-red-50 p-4"
+                        className="rounded-2xl border-2 border-red-200 bg-red-50 p-4 relative group"
                       >
-                        <p className="text-xs font-extrabold text-red-600 flex items-center gap-1.5">
-                          <AlertTriangle size={14} /> ATTENDANCE WARNING
-                        </p>
+                        <div className="flex items-start justify-between">
+                          <p className="text-xs font-extrabold text-red-600 flex items-center gap-1.5">
+                            <AlertTriangle size={14} /> ATTENDANCE WARNING
+                          </p>
+                          {(mine || isHead) && (
+                            <button
+                              onClick={() => deleteMessage(m.id)}
+                              title="Delete warning"
+                              className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-700 transition"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
                         <p className="text-sm text-red-900 mt-1.5 leading-relaxed">{m.body}</p>
                         <p className="text-[11px] text-red-400 mt-1.5">
                           {new Date(m.created_at).toLocaleString()}
@@ -428,11 +450,11 @@ export default function Chat() {
                   return (
                     <div
                       key={m.id}
-                      className={`flex gap-2 ${mine ? 'justify-end' : 'justify-start'}`}
+                      className={`group flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}
                     >
                       {!mine && <Avatar p={sender} size="h-8 w-8 text-[10px]" />}
                       <div
-                        className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-3.5 sm:px-4 py-2.5 ${
+                        className={`relative max-w-[85%] sm:max-w-[75%] rounded-2xl px-3.5 sm:px-4 py-2.5 ${
                           mine
                             ? 'bg-zinc-900 text-white rounded-br-md shadow-sm'
                             : 'bg-white border border-zinc-200 rounded-bl-md shadow-sm'
@@ -462,6 +484,15 @@ export default function Chat() {
                           })}
                         </p>
                       </div>
+                      {(mine || isHead) && (
+                        <button
+                          onClick={() => deleteMessage(m.id)}
+                          title="Delete message"
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition shrink-0"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
