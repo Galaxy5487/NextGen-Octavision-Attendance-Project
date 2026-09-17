@@ -1,4 +1,4 @@
-import supabase from './db-client.js';
+import supabase from './_db-client.js';
 import { netlifyAdapter } from './_adapter.js';
 
 const BUCKET = 'avatars';

@@ -1,4 +1,4 @@
-import supabase from './db-client.js';
+import supabase from './_db-client.js';
 import nodemailer from 'nodemailer';
 
 export const POINTS = { present: 1, half: 0.5, permitted: 1, absent: 0 };

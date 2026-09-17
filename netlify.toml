@@ -3,6 +3,9 @@
   publish = "dist"
   functions = "api"
 
+[functions]
+  node_bundler = "esbuild"
+
 # Redirect /api/* to Netlify serverless functions
 [[redirects]]
   from = "/api/*"
@@ -14,3 +17,4 @@
   from = "/*"
   to = "/index.html"
   status = 200
+

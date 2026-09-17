@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { triggerRestore } from './db-wake.js';
+import { triggerRestore } from './_db-wake.js';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://kztsphgwobudettagemb.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_qyzo1R4zewhnNlZ2MrVb1w_F-KLiwR5';
@@ -32,5 +32,3 @@ const supabase = new Proxy({}, {
 
 export { supabase };
 export default supabase;
-
-
