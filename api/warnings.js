@@ -46,6 +46,20 @@ export async function mainHandler(req, res) {
       await notifyUsers([emp.id], { title: 'Attendance Warning', body: `${emp.full_name}, a warning was issued for ${date}. Score: ${s.score}%.`, kind: 'warning', link: '#/app/warnings' });
       return res.status(201).json(data);
     }
+    if (req.method === 'DELETE') {
+      const { id, employee_id, clear_all } = req.body || {};
+      if (id) {
+        const { error } = await supabase.from('warning_logs').delete().eq('id', id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+      if (employee_id && clear_all) {
+        const { error } = await supabase.from('warning_logs').delete().eq('employee_id', employee_id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+      return res.status(400).json({ error: 'id required' });
+    }
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('warnings error:', err);

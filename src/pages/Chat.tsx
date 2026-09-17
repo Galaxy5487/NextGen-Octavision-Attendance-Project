@@ -181,6 +181,28 @@ export default function Chat() {
     return <Avatar p={other} />;
   };
 
+  const deleteMessage = async (mid: number) => {
+    if (!confirm('Delete this message?')) return;
+    try {
+      await api('/api/messages', { method: 'DELETE', body: { id: mid } });
+      if (active) loadMsgs(active);
+    } catch (e: any) {
+      alert('Failed to delete message: ' + e.message);
+    }
+  };
+
+  const clearChat = async () => {
+    if (!active) return;
+    if (!confirm('Clear all messages in this conversation?')) return;
+    try {
+      await api('/api/messages', { method: 'DELETE', body: { thread_id: active } });
+      loadMsgs(active);
+      loadThreads();
+    } catch (e: any) {
+      alert('Failed to clear chat: ' + e.message);
+    }
+  };
+
   const activeThread = threads.find((t) => t.id === active);
 
   // Filter out the currently logged-in user using String comparison for type safety

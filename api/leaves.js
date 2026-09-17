@@ -74,11 +74,20 @@ export async function mainHandler(req, res) {
       return res.status(200).json(data);
     }
     if (req.method === 'DELETE') {
-      const { id } = req.body || {};
-      if (!id) return res.status(400).json({ error: 'id required' });
-      const { error } = await supabase.from('leave_requests').delete().eq('id', id);
-      if (error) throw error;
-      return res.status(200).json({ ok: true });
+      const { id, employee_id, clear_processed } = req.body || {};
+      if (id) {
+        const { error } = await supabase.from('leave_requests').delete().eq('id', id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+      if (clear_processed) {
+        let q = supabase.from('leave_requests').delete().in('status', ['permitted', 'denied']);
+        if (employee_id) q = q.eq('employee_id', employee_id);
+        const { error } = await q;
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+      return res.status(400).json({ error: 'id required' });
     }
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
