@@ -30,8 +30,9 @@ export async function mainHandler(req, res) {
       // Avoid duplicate DMs
       if (type === 'dm') {
         const { data: all } = await supabase.from('threads').select('*').eq('type', 'dm');
-        const set = [...member_ids].sort().join(',');
-        const dup = (all || []).find((t) => [...(t.member_ids || [])].sort().join(',') === set);
+        const setKey = (arr) => (arr || []).map(Number).sort((a, b) => a - b).join(',');
+        const targetKey = setKey(member_ids);
+        const dup = (all || []).find((t) => setKey(t.member_ids) === targetKey);
         if (dup) return res.status(200).json(dup);
       }
       const { data, error } = await supabase.from('threads').insert({

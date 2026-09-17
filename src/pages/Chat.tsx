@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Users, User, Plus, AlertTriangle, X, Trash2, Pencil, Search, MessageSquarePlus } from 'lucide-react';
+import { Send, Users, User, Plus, AlertTriangle, X, Trash2, Pencil, Search, MessageSquarePlus, Crown, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import type { Thread, Message, Profile } from '../lib/types';
@@ -36,13 +36,13 @@ export default function Chat() {
         api<Thread[]>(`/api/threads?user_id=${user.id}`),
         api<Profile[]>('/api/employees'),
       ]);
-      setThreads(t);
+      setThreads(t || []);
       const activePeople = (p || []).filter((x) => x.active !== false);
       setPeople(activePeople);
 
       // Auto-select first thread on initial desktop load if no active thread
       setActive((current) => {
-        if (current === null && t.length > 0) return t[0].id;
+        if (current === null && (t || []).length > 0) return t[0].id;
         return current;
       });
     } catch (e) {
@@ -159,7 +159,7 @@ export default function Chat() {
 
   const threadLabel = (t: Thread) => {
     if (t.type !== 'dm') return t.name;
-    const other = t.member_ids.map(byId).find((p) => p && p.id !== user?.id);
+    const other = t.member_ids.map(byId).find((p) => p && String(p.id) !== String(user?.id));
     return other ? other.full_name : t.name;
   };
 
@@ -176,20 +176,34 @@ export default function Chat() {
           <Users size={18} className="text-white" />
         </div>
       );
-    const other = t.member_ids.map(byId).find((p) => p && p.id !== user?.id);
+    const other = t.member_ids.map(byId).find((p) => p && String(p.id) !== String(user?.id));
     return <Avatar p={other} />;
   };
 
   const activeThread = threads.find((t) => t.id === active);
-  const others = people.filter((p) => p.id !== user?.id);
-  const filteredContacts = others.filter(
+
+  // Filter out the currently logged-in user using String comparison for type safety
+  const others = people.filter((p) => String(p.id) !== String(user?.id));
+
+  // Sort contacts so Team Head appears at the top, followed by employees alphabetically
+  const sortedOthers = [...others].sort((a, b) => {
+    if (a.role === 'head' && b.role !== 'head') return -1;
+    if (a.role !== 'head' && b.role === 'head') return 1;
+    return a.full_name.localeCompare(b.full_name);
+  });
+
+  const filteredContacts = sortedOthers.filter(
     (p) =>
       p.full_name.toLowerCase().includes(searchContact.toLowerCase()) ||
-      (p.designation || '').toLowerCase().includes(searchContact.toLowerCase())
+      (p.designation || '').toLowerCase().includes(searchContact.toLowerCase()) ||
+      (p.email || '').toLowerCase().includes(searchContact.toLowerCase())
   );
+
   const filteredThreads = threads.filter((t) =>
     threadLabel(t).toLowerCase().includes(searchThread.toLowerCase())
   );
+
+  const selectedPerson = mode === 'dm' && picked.length ? people.find((p) => p.id === picked[0]) : null;
 
   if (loading)
     return (
@@ -206,7 +220,7 @@ export default function Chat() {
           <p className="text-xs sm:text-sm text-zinc-500">
             {isHead
               ? 'Chat with employees, create groups, warnings land here too.'
-              : 'Chat with team head and members. Absence warnings appear here.'}
+              : 'Chat with Team Head and team members. Absence warnings appear here.'}
           </p>
         </div>
         <button
@@ -233,7 +247,7 @@ export default function Chat() {
             <button
               onClick={() => openNewModal('dm')}
               title="Start New Chat"
-              className="p-1 rounded-lg text-zinc-500 hover:bg-zinc-100 transition"
+              className="p-1.5 rounded-lg text-zinc-500 hover:bg-zinc-100 transition"
             >
               <MessageSquarePlus size={16} />
             </button>
@@ -261,7 +275,7 @@ export default function Chat() {
                 </div>
                 <p className="text-sm font-bold text-zinc-700">No conversations yet</p>
                 <p className="text-xs text-zinc-500 max-w-[200px] mx-auto">
-                  Start a direct chat or group with your team members.
+                  Start a direct chat or group with your Team Head and employees.
                 </p>
                 <button
                   onClick={() => openNewModal('dm')}
@@ -324,11 +338,11 @@ export default function Chat() {
               />
               <p className="font-bold text-base">Select a conversation</p>
               <p className="text-sm text-zinc-500 max-w-xs">
-                Pick a chat from the sidebar or click below to start a new chat or group with team contacts.
+                Pick a chat from the sidebar or click below to start chatting with Team Head or employees.
               </p>
               <button
                 onClick={() => openNewModal('dm')}
-                className="mt-2 rounded-xl bg-zinc-900 text-white text-xs font-bold px-4 py-2.5 hover:bg-zinc-800"
+                className="mt-2 rounded-xl bg-zinc-900 text-white text-xs font-bold px-4 py-2.5 hover:bg-zinc-800 transition"
               >
                 New Chat / Group
               </button>
@@ -344,7 +358,9 @@ export default function Chat() {
                 </button>
                 {threadIcon(activeThread)}
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold truncate">{threadLabel(activeThread)}</p>
+                  <p className="font-bold truncate flex items-center gap-2">
+                    {threadLabel(activeThread)}
+                  </p>
                   <p className="text-[11px] text-zinc-500">
                     {activeThread.type === 'group'
                       ? `${activeThread.member_ids.length} members`
@@ -353,12 +369,12 @@ export default function Chat() {
                       : 'Direct message'}
                   </p>
                 </div>
-                {(isHead || activeThread.created_by === user?.id) &&
+                {(isHead || String(activeThread.created_by) === String(user?.id)) &&
                   activeThread.type === 'group' && (
                     <button
                       onClick={() => deleteThread(activeThread.id)}
                       title="Delete group"
-                      className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50"
+                      className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -366,7 +382,7 @@ export default function Chat() {
               </div>
               <div className="flex-1 overflow-y-auto scroll-thin p-4 sm:p-5 space-y-3 bg-[#fafafa]">
                 {msgs.map((m) => {
-                  const mine = m.sender_id === user?.id;
+                  const mine = String(m.sender_id) === String(user?.id);
                   const sender = byId(m.sender_id);
                   if (m.kind === 'warning') {
                     return (
@@ -400,8 +416,13 @@ export default function Chat() {
                         }`}
                       >
                         {!mine && (
-                          <p className="text-[11px] font-bold text-zinc-500 mb-0.5">
+                          <p className="text-[11px] font-bold text-zinc-500 mb-0.5 flex items-center gap-1">
                             {sender?.full_name || 'Unknown'}
+                            {sender?.role === 'head' && (
+                              <span className="text-[9px] font-extrabold px-1 py-0.2 rounded bg-amber-100 text-amber-800">
+                                👑 HEAD
+                              </span>
+                            )}
                           </p>
                         )}
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.body}</p>
@@ -448,10 +469,13 @@ export default function Chat() {
           <form
             onSubmit={createThread}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl max-h-[88vh] flex flex-col"
+            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl max-h-[90vh] flex flex-col"
           >
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-              <h3 className="font-display font-extrabold text-lg">New Chat / Group</h3>
+              <div>
+                <h3 className="font-display font-extrabold text-lg">New Chat / Group</h3>
+                <p className="text-xs text-zinc-500">Pick Team Head or Employees to start chatting</p>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowNew(false)}
@@ -517,13 +541,13 @@ export default function Chat() {
                   required
                   value={gName}
                   onChange={(e) => setGName(e.target.value)}
-                  placeholder="e.g. Design Team, Frontend Sprint"
+                  placeholder="e.g. Design Team, Octavision Core"
                   className="w-full rounded-xl border border-zinc-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
                 />
               </div>
             )}
 
-            {/* Contact search */}
+            {/* Contact search & label */}
             <div className="mt-4 flex items-center justify-between mb-1.5">
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
                 {mode === 'dm' ? 'Pick a Contact' : 'Pick Members'} ({filteredContacts.length})
@@ -535,13 +559,13 @@ export default function Chat() {
               <input
                 value={searchContact}
                 onChange={(e) => setSearchContact(e.target.value)}
-                placeholder="Search contacts by name or role..."
+                placeholder="Search Team Head or Employees by name..."
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-zinc-200 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white"
               />
             </div>
 
             {/* Contact List */}
-            <div className="flex-1 overflow-y-auto scroll-thin space-y-1.5 max-h-[220px] min-h-[140px] pr-1">
+            <div className="flex-1 overflow-y-auto scroll-thin space-y-1.5 max-h-[250px] min-h-[160px] pr-1">
               {filteredContacts.length === 0 && (
                 <div className="text-center py-8 text-zinc-500">
                   <p className="text-xs font-semibold">No contacts found</p>
@@ -552,6 +576,7 @@ export default function Chat() {
               )}
               {filteredContacts.map((p) => {
                 const on = picked.includes(p.id);
+                const isTeamHead = p.role === 'head';
                 return (
                   <button
                     type="button"
@@ -568,6 +593,8 @@ export default function Chat() {
                     className={`w-full flex items-center gap-3 rounded-xl border p-2.5 transition text-left ${
                       on
                         ? 'border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900'
+                        : isTeamHead
+                        ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-50/80'
                         : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/50'
                     }`}
                   >
@@ -575,14 +602,14 @@ export default function Chat() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold truncate flex items-center gap-1.5">
                         {p.full_name}
-                        {p.role === 'head' && (
-                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                            👑 HEAD
+                        {isTeamHead && (
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-amber-950 flex items-center gap-0.5">
+                            <Crown size={10} /> TEAM HEAD
                           </span>
                         )}
                       </p>
                       <p className="text-[11px] text-zinc-500 truncate">
-                        {p.role === 'head' ? 'Team Head' : p.designation || 'Team Member'}
+                        {isTeamHead ? 'Agency Leader · Team Head' : p.designation || 'Team Member'}
                       </p>
                     </div>
                     <div
@@ -612,7 +639,9 @@ export default function Chat() {
               {busy
                 ? 'Creating…'
                 : mode === 'dm'
-                ? 'Start Direct Chat'
+                ? selectedPerson
+                  ? `Start Chat with ${selectedPerson.full_name.split(' ')[0]}`
+                  : 'Start Direct Chat'
                 : `Create Group (${picked.length} selected)`}
             </button>
           </form>
