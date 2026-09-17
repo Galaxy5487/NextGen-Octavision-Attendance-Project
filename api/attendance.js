@@ -21,7 +21,15 @@ async function issueAbsenceWarning(emp, date, marked_by) {
   const s = computed.stats[0];
   if (s.score == null) return null; // future date — nothing elapsed, no warning
   const { subject, body } = warningEmail(emp.full_name, date, s.score, s);
-  const email_status = await trySendEmail(emp.email, subject, body);
+
+  const recipientEmails = new Set();
+  if (emp.email) recipientEmails.add(emp.email);
+  try {
+    const { data: head } = await supabase.from('profiles').select('email').eq('role', 'head');
+    (head || []).forEach((h) => { if (h.email) recipientEmails.add(h.email); });
+  } catch {}
+
+  const email_status = await trySendEmail([...recipientEmails], subject, body);
   const { data: log, error } = await supabase.from('warning_logs').insert({
     employee_id: emp.id, date, subject, body, score_snapshot: s.score, email_status,
   }).select().single();

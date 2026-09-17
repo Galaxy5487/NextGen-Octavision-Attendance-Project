@@ -133,10 +133,15 @@ export async function trySendEmail(to, subject, text) {
   if (!key) return 'logged';
   const senderEmail = process.env.BREVO_SENDER_EMAIL || 'octavisionteam@gmail.com';
   const smtpUser = process.env.BREVO_SMTP_USER || senderEmail;
-  const safe = String(text || '').replace(/</g, '&lt;');
-  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden">` +
-    `<div style="background:#09090b;color:#fff;padding:20px 24px"><h2 style="margin:0">NextGen Octavision</h2><p style="margin:4px 0 0;font-size:12px;letter-spacing:2px">CREATE – INNOVATE – EVOLVE</p></div>` +
-    `<div style="padding:24px;white-space:pre-wrap;font-size:14px;line-height:1.6">${safe}</div></div>`;
+  const logoUrl = 'https://nextgen-octavision.netlify.app/logo.png';
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05)">` +
+    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#09090b;padding:20px 24px">` +
+    `<tr>` +
+    `<td width="56" style="vertical-align:middle"><img src="${logoUrl}" width="48" height="48" alt="NextGen Octavision" style="width:48px;height:48px;border-radius:12px;object-fit:cover;background:#ffffff;border:1px solid rgba(255,255,255,0.2);display:block" /></td>` +
+    `<td style="vertical-align:middle;padding-left:14px"><h2 style="margin:0;color:#ffffff;font-size:19px;font-weight:800;line-height:1.2">NextGen Octavision</h2><p style="margin:4px 0 0;color:#a1a1aa;font-size:11px;font-weight:700;letter-spacing:2px">CREATE – INNOVATE – EVOLVE</p></td>` +
+    `</tr></table>` +
+    `<div style="padding:24px;white-space:pre-wrap;font-size:14px;line-height:1.6;color:#18181b">${safe}</div>` +
+    `<div style="background:#f4f4f5;padding:14px 24px;border-t:1px solid #e4e4e7;font-size:11px;color:#71717a;text-align:center">NextGen Octavision Attendance & Agency Portal</div></div>`;
 
   // 1. If key is an SMTP key (starts with xsmtpsib-), use Nodemailer SMTP relay
   if (key.startsWith('xsmtpsib-')) {
@@ -149,7 +154,7 @@ export async function trySendEmail(to, subject, text) {
       });
       await transporter.sendMail({
         from: `"NextGen Octavision" <${senderEmail}>`,
-        to,
+        to: Array.isArray(to) ? to.join(',') : to,
         subject,
         text: String(text || ''),
         html,
@@ -163,12 +168,13 @@ export async function trySendEmail(to, subject, text) {
 
   // 2. Otherwise (starts with xkeysib-), use Brevo v3 REST API
   try {
+    const recipients = (Array.isArray(to) ? to : [to]).map((e) => ({ email: e }));
     const r = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': key, 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
         sender: { name: 'NextGen Octavision', email: senderEmail },
-        to: [{ email: to }],
+        to: recipients,
         subject,
         htmlContent: html,
         textContent: String(text || ''),

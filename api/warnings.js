@@ -27,7 +27,14 @@ export async function mainHandler(req, res) {
       const s = computed.stats[0];
       const { subject, body } = warningEmail(emp.full_name, date, s.score, s);
       const fullBody = custom_note ? `${body}\n\nNote from Team Head: ${custom_note}` : body;
-      const email_status = await trySendEmail(emp.email, subject, fullBody);
+      const recipientEmails = new Set();
+      if (emp.email) recipientEmails.add(emp.email);
+      try {
+        const { data: head } = await supabase.from('profiles').select('email').eq('role', 'head');
+        (head || []).forEach((h) => { if (h.email) recipientEmails.add(h.email); });
+      } catch {}
+
+      const email_status = await trySendEmail([...recipientEmails], subject, fullBody);
       const { data, error } = await supabase.from('warning_logs').insert({
         employee_id, date, subject, body: fullBody, score_snapshot: s.score, email_status,
       }).select().single();

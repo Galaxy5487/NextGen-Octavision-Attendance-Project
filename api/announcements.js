@@ -1,5 +1,5 @@
 import supabase from './_db-client.js';
-import { notifyUsers, activeUserIds } from './_scores.js';
+import { notifyUsers, activeUserIds, trySendEmail } from './_scores.js';
 import { netlifyAdapter } from './_adapter.js';
 
 export async function mainHandler(req, res) {
@@ -23,6 +23,20 @@ export async function mainHandler(req, res) {
       if (error) throw error;
       const ids = await activeUserIds();
       await notifyUsers(ids.filter((i) => i !== created_by), { title: `Announcement: ${title}`, body: body.slice(0, 140), kind: 'announcement', link: '#/app/announcements' });
+
+      // Dispatch email notification to all active team profiles
+      try {
+        const { data: profiles } = await supabase.from('profiles').select('email').eq('active', true);
+        const emails = [...new Set((profiles || []).map((p) => p.email).filter(Boolean))];
+        if (emails.length) {
+          const emailSubject = `📢 Announcement: ${title}`;
+          const emailBody = `Dear Team Member,\n\nA new announcement has been published on NextGen Octavision:\n\n📌 ${title}\n--------------------------------------------------\n${body}\n\nLog in to view the announcement:\nhttps://nextgen-octavision.netlify.app\n\nRegards,\nNextGen Octavision Team`;
+          await trySendEmail(emails, emailSubject, emailBody);
+        }
+      } catch (eErr) {
+        console.error('announcement email dispatch error:', eErr);
+      }
+
       return res.status(201).json(data);
     }
     if (req.method === 'DELETE') {
