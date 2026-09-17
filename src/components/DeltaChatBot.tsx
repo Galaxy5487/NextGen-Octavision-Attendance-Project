@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Sparkles, X, Send, Minimize2, Maximize2, Trash2, ChevronRight, HelpCircle, ArrowUpRight } from 'lucide-react';
+import { Sparkles, X, Send, Minimize2, Maximize2, Trash2, HelpCircle, ArrowUpRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../lib/api';
+import type { Profile } from '../lib/types';
 
 interface ChatMessage {
   id: string;
@@ -12,10 +14,11 @@ interface ChatMessage {
 }
 
 const QUICK_QUESTIONS = [
+  { label: '👑 Team Head Info', query: 'Who is the Team Head?' },
+  { label: '👥 Team & Designations', query: 'Show all team members and their designations' },
   { label: '📊 Attendance Score', query: 'How does the attendance score work?' },
   { label: '✈️ Leave Requests', query: 'How do I request a permission leave?' },
   { label: '⚠️ Warning Emails', query: 'What happens when someone gets a warning email?' },
-  { label: '👑 Roles & Head', query: 'What is the difference between Team Head and Employee?' },
   { label: '🕒 Work Timings', query: 'What are the working hours and check-in times?' },
   { label: '💬 Chat Options', query: 'How to clear chat or remove a contact?' },
 ];
@@ -29,7 +32,7 @@ const DELTA_KNOWLEDGE: { keywords: string[]; answer: string; links?: { label: st
 • **Permitted Leave**: Does not deduct score! Counts toward attendance safety.
 • **Sunday Working**: Earn bonus coverage and maintain high score.
 • **Warning Threshold**: Falling below **70%** triggers automatic Warning Email notifications & chat alerts to Team Head and employee.`,
-    links: [{ label: 'View Your Score', url: '/app/scores' }],
+    links: [{ label: 'View Scores', url: '/app/scores' }],
   },
   {
     keywords: ['leave', 'permission', 'apply', 'holiday', 'day off', 'sick'],
@@ -62,13 +65,6 @@ const DELTA_KNOWLEDGE: { keywords: string[]; answer: string; links?: { label: st
     ],
   },
   {
-    keywords: ['head', 'role', 'employee', 'permission', 'admin', 'leader', 'boss'],
-    answer: `👑 **Roles & Permissions**:
-• **Team Head (👑)**: Full control to mark attendance, issue warning emails, create announcements, assign tasks, approve/deny leaves, and manage team members.
-• **Employee (👤)**: Can view personal attendance scores, view/complete assigned tasks, request permission leaves, chat with team, and receive announcements.`,
-    links: [{ label: 'View Team Members', url: '/app/team' }],
-  },
-  {
     keywords: ['chat', 'delete', 'clear', 'message', 'remove', 'contact', 'whatsapp', 'gmail'],
     answer: `💬 **Chat & Message Controls**:
 • **Delete Message**: Hover over any chat message bubble and click the **Trash** icon.
@@ -80,12 +76,12 @@ const DELTA_KNOWLEDGE: { keywords: string[]; answer: string; links?: { label: st
     keywords: ['announcement', 'notice', 'broadcast', 'news', 'hide', 'dismiss'],
     answer: `📢 **Announcements Feature**:
 • Team Head broadcasts important notices to the entire team.
-• Employees can read and **Hide/Dismiss** (` + '`EyeOff`' + ` icon) announcements from their feed.
+• Employees can read and **Hide/Dismiss** (\`EyeOff\` icon) announcements from their feed.
 • Team Head can permanently **Delete** announcements for everyone.`,
     links: [{ label: 'View Announcements', url: '/app/announcements' }],
   },
   {
-    keywords: ['calendar', 'birthday', 'event', 'celebration', 'sunday', 'holiday'],
+    keywords: ['calendar', 'birthday', 'event', 'celebration', 'sunday'],
     answer: `📅 **Calendar & Events**:
 • Displays working days, Sundays, and Working Sunday events.
 • Real celebrations! Shows employee **Birthdays** 🎂 and **Work Anniversaries** 🎉 automatically.`,
@@ -113,17 +109,25 @@ export default function DeltaChatBot() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [team, setTeam] = useState<Profile[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'delta',
       text: `Hello! 👋 I'm **Delta**, your AI assistant for **NextGen Octavision**.
 
-I know everything about attendance rules, scores, leaves, warnings, chat features, and team settings. How can I help you today?`,
+I know everything about our Team Members, Team Head, Designations, Attendance Rules, Scores, Leaves & Features! How can I help you today?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch live team members and team head info on mount
+  useEffect(() => {
+    api<Profile[]>('/api/employees')
+      .then((data) => setTeam(data || []))
+      .catch((err) => console.error('Delta failed to load team data:', err));
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -150,40 +154,121 @@ I know everything about attendance rules, scores, leaves, warnings, chat feature
 
     setTimeout(() => {
       const lower = text.toLowerCase();
-      let match = DELTA_KNOWLEDGE.find((k) => k.keywords.some((kw) => lower.includes(kw)));
-
       let responseText = '';
       let links: { label: string; url: string }[] | undefined = undefined;
 
-      if (match) {
-        responseText = match.answer;
-        links = match.links;
-      } else if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
-        responseText = `Hi there! 😊 I'm **Delta**. Ask me any question about NextGen Octavision attendance, score rules, permission leaves, warning emails, or chat options!`;
-      } else if (lower.includes('who are you') || lower.includes('name')) {
-        responseText = `I am **Delta** 🤖, the official AI Chatbot for **NextGen Octavision Attendance System**. I can guide you through every feature of the website!`;
-      } else if (lower.includes('help') || lower.includes('what can you do')) {
-        responseText = `I can help you with:
-• **Attendance & Scores** (How score is computed & penalties)
-• **Permission Leaves** (How to apply & head approval)
-• **Warning Emails** (Absence alerts & email snapshots)
+      const heads = team.filter((p) => p.role === 'head');
+      const employees = team.filter((p) => p.role === 'employee' && p.active !== false);
+
+      // 1. Team Head Queries
+      if (
+        lower.includes('head') ||
+        lower.includes('leader') ||
+        lower.includes('boss') ||
+        lower.includes('admin') ||
+        lower.includes('who leads')
+      ) {
+        if (heads.length > 0) {
+          const h = heads[0];
+          responseText = `👑 **Team Head Information**:
+• **Name**: ${h.full_name}
+• **Role**: Team Head / Administrator 👑
+• **Designation**: ${h.designation || 'Team Head'}
+• **Email**: \`${h.email}\`
+• **Status**: Active Leader
+
+As Team Head, ${h.full_name.split(' ')[0]} oversees daily attendance, sends official warning emails, assigns tasks, approves leave requests, and publishes company announcements!`;
+        } else {
+          responseText = `👑 **Team Head Information**:
+• **Role**: Team Head / Administrator
+• **Responsibilities**: Oversees attendance marking, score monitoring, task assignments, leave permissions, and team management.`;
+        }
+        links = [{ label: 'View Team Roster', url: '/app/team' }];
+      }
+      // 2. Team Members & Designations Queries
+      else if (
+        lower.includes('team') ||
+        lower.includes('member') ||
+        lower.includes('designation') ||
+        lower.includes('who works') ||
+        lower.includes('employee list') ||
+        lower.includes('staff') ||
+        lower.includes('roster')
+      ) {
+        if (team.length > 0) {
+          const headList = heads.map((h) => `• 👑 **${h.full_name}** — ${h.designation || 'Team Head'}`).join('\n');
+          const empList = employees
+            .map((e) => `• 👤 **${e.full_name}** — ${e.designation || 'Team Member'}`)
+            .join('\n');
+
+          const totalCount = team.length;
+          const designations = Array.from(
+            new Set(team.map((t) => t.designation || 'Team Member'))
+          ).join(', ');
+
+          responseText = `👥 **NextGen Octavision Team & Designations** (${totalCount} Total Members):
+
+👑 **Team Head**:
+${headList || '• Team Head'}
+
+👤 **Team Members & Employees**:
+${empList || '• Employees'}
+
+💼 **Company Designations Active**:
+${designations}`;
+        } else {
+          responseText = `👥 **NextGen Octavision Team**:
+Our company consists of Team Head and skilled Team Members across engineering, design, and operations. View the live Team page for full profile details!`;
+        }
+        links = [{ label: 'Open Team Page', url: '/app/team' }];
+      }
+      // 3. Search Specific Person Name
+      else if (team.some((p) => lower.includes(p.full_name.toLowerCase()) || lower.includes(p.full_name.split(' ')[0].toLowerCase()))) {
+        const found = team.find(
+          (p) => lower.includes(p.full_name.toLowerCase()) || lower.includes(p.full_name.split(' ')[0].toLowerCase())
+        )!;
+        const isHead = found.role === 'head';
+        responseText = `👤 **Employee Profile Detail**:
+• **Full Name**: ${found.full_name}
+• **Role**: ${isHead ? '👑 Team Head' : '👤 Team Member'}
+• **Designation**: ${found.designation || 'Team Member'}
+• **Email**: \`${found.email}\`
+• **Status**: ${found.active !== false ? '✅ Active Member' : '❌ Inactive'}`;
+        links = [{ label: 'Message in Team Chat', url: '/app/chat' }];
+      }
+      // 4. Standard Delta Knowledge Match
+      else {
+        let match = DELTA_KNOWLEDGE.find((k) => k.keywords.some((kw) => lower.includes(kw)));
+        if (match) {
+          responseText = match.answer;
+          links = match.links;
+        } else if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
+          responseText = `Hi there! 😊 I'm **Delta**. Ask me any question about our **Team Head**, **Team Members**, **Designations**, attendance score rules, permission leaves, or warning emails!`;
+        } else if (lower.includes('who are you') || lower.includes('name')) {
+          responseText = `I am **Delta** 🤖, the official AI Chatbot for **NextGen Octavision Attendance System**. I know all company team members, designations, attendance rules, and website features!`;
+        } else if (lower.includes('help') || lower.includes('what can you do')) {
+          responseText = `I can help you with:
+• **Company Team & Head** (Team member list & designations)
+• **Attendance & Scores** (100% score calculation & penalties)
+• **Permission Leaves** (Requesting & approving time off)
+• **Warning Emails** (Absence email logs & chat alerts)
 • **Team Chat** (Deleting messages, clearing chats & removing contacts)
-• **Calendar & Tasks** (Events, birthdays & task tracking)
-• **Profile Settings** (Theme, avatar & credentials)`;
-      } else {
-        responseText = `I understand you are asking about: "${text}".
+• **Calendar & Tasks** (Birthdays, work anniversaries & task tracking)`;
+        } else {
+          responseText = `I understand you are asking about: "${text}".
 
 Here are quick actions you can take in **NextGen Octavision**:
+• Check **Team Roster & Designations** on the Team page.
 • View **Attendance Sheet** to check daily records.
 • Check your **Attendance Score** dashboard.
 • Apply for **Permission Leave** if you need time off.
-• Use **Team Chat** to message your Team Head or colleagues.
 
 Feel free to pick one of the quick questions below or rephrase your question!`;
-        links = [
-          { label: 'Go to Dashboard', url: '/app' },
-          { label: 'View Attendance Sheet', url: '/app/sheet' },
-        ];
+          links = [
+            { label: 'View Team Page', url: '/app/team' },
+            { label: 'Go to Dashboard', url: '/app' },
+          ];
+        }
       }
 
       const deltaMsg: ChatMessage = {
@@ -204,7 +289,7 @@ Feel free to pick one of the quick questions below or rephrase your question!`;
       {
         id: 'welcome_reset',
         sender: 'delta',
-        text: `Chat cleared! 🧹 Ask me anything about **NextGen Octavision** attendance, leaves, scores, or website features!`,
+        text: `Chat cleared! 🧹 Ask me anything about **NextGen Octavision** team members, Team Head, designations, attendance, scores, or leaves!`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
@@ -242,7 +327,7 @@ Feel free to pick one of the quick questions below or rephrase your question!`;
             className={`bg-white rounded-3xl border border-zinc-200 shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
               isExpanded
                 ? 'fixed inset-3 sm:inset-6 z-50 w-auto h-auto max-w-4xl mx-auto'
-                : 'w-[92vw] sm:w-[380px] h-[520px] max-h-[82vh]'
+                : 'w-[92vw] sm:w-[390px] h-[540px] max-h-[84vh]'
             }`}
           >
             {/* Header */}
@@ -258,7 +343,7 @@ Feel free to pick one of the quick questions below or rephrase your question!`;
                     <p className="font-display font-extrabold text-sm tracking-tight">Delta Assistant</p>
                     <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-400 text-amber-950">AI</span>
                   </div>
-                  <p className="text-[10px] text-zinc-400 font-medium">NextGen Octavision Guide</p>
+                  <p className="text-[10px] text-zinc-400 font-medium">NextGen Octavision & Team Guide</p>
                 </div>
               </div>
 
@@ -370,7 +455,7 @@ Feel free to pick one of the quick questions below or rephrase your question!`;
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Delta about attendance, leaves, rules..."
+                placeholder="Ask Delta about team head, employees, score, leaves..."
                 className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white"
               />
               <button
