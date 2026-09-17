@@ -309,13 +309,13 @@ export default function Chat() {
               </div>
             )}
             {filteredThreads.map((t) => (
-              <button
+              <div
                 key={t.id}
                 onClick={() => {
                   setActive(t.id);
                   setMobileList(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 border-b border-zinc-50 text-left transition ${
+                className={`group/item w-full flex items-center gap-3 px-4 py-3.5 border-b border-zinc-50 text-left transition cursor-pointer select-none ${
                   active === t.id ? 'bg-zinc-900 text-white' : 'hover:bg-zinc-50'
                 }`}
               >
@@ -341,7 +341,21 @@ export default function Chat() {
                     className={`shrink-0 ${active === t.id ? 'text-zinc-300' : 'text-zinc-400'}`}
                   />
                 )}
-              </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteThread(t.id);
+                  }}
+                  title="Remove / Delete conversation contact"
+                  className={`opacity-0 group-hover/item:opacity-100 p-1.5 rounded-lg transition shrink-0 ${
+                    active === t.id
+                      ? 'text-zinc-400 hover:text-red-400 hover:bg-white/10'
+                      : 'text-zinc-400 hover:text-red-600 hover:bg-red-50'
+                  }`}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -392,7 +406,7 @@ export default function Chat() {
                       : 'Direct message'}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   {msgs.length > 0 && (
                     <button
                       onClick={clearChat}
@@ -402,16 +416,13 @@ export default function Chat() {
                       <Eraser size={14} /> Clear Chat
                     </button>
                   )}
-                  {(isHead || String(activeThread.created_by) === String(user?.id)) &&
-                    activeThread.type === 'group' && (
-                      <button
-                        onClick={() => deleteThread(activeThread.id)}
-                        title="Delete group"
-                        className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
+                  <button
+                    onClick={() => deleteThread(activeThread.id)}
+                    title="Remove / Delete Contact Conversation"
+                    className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg border border-zinc-200 transition"
+                  >
+                    <Trash2 size={14} /> Remove Contact
+                  </button>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto scroll-thin p-4 sm:p-5 space-y-3 bg-[#fafafa]">
