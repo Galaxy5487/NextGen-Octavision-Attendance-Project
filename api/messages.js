@@ -29,6 +29,20 @@ export async function mainHandler(req, res) {
       }
       return res.status(201).json(data);
     }
+    if (req.method === 'DELETE') {
+      const { id, thread_id } = req.body || {};
+      if (id) {
+        const { error } = await supabase.from('messages').delete().eq('id', id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+      if (thread_id) {
+        const { error } = await supabase.from('messages').delete().eq('thread_id', thread_id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+      return res.status(400).json({ error: 'id or thread_id required' });
+    }
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('messages error:', err);
