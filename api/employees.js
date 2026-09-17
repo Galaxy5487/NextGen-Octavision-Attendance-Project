@@ -1,8 +1,9 @@
 import supabase from './db-client.js';
+import { netlifyAdapter } from './_adapter.js';
 
 const strip = (u, photoMap) => { const { password: _p, ...safe } = u; safe.avatar_url = (photoMap && photoMap[u.id]) || null; return safe; };
 
-export default async function handler(req, res) {
+export async function mainHandler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -81,3 +82,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export default mainHandler;
+export const handler = netlifyAdapter(mainHandler);
+
