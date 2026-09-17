@@ -9,12 +9,14 @@ export async function mainHandler(req, res) {
   try {
     if (req.method === 'GET') {
       const { user_id } = req.query;
-      let q = supabase.from('threads').select('*').order('created_at', { ascending: false });
-      if (user_id) q = q.contains('member_ids', [Number(user_id)]);
-      const { data, error } = await q;
+      const { data, error } = await supabase.from('threads').select('*').order('created_at', { ascending: false });
       if (error) throw error;
+      let threads = data || [];
+      if (user_id) {
+        const uid = Number(user_id);
+        threads = threads.filter((t) => (t.member_ids || []).map(Number).includes(uid));
+      }
       // Attach last message preview
-      const threads = data || [];
       if (threads.length) {
         const ids = threads.map((t) => t.id);
         const { data: msgs } = await supabase.from('messages').select('thread_id,body,created_at').in('thread_id', ids).order('created_at', { ascending: false }).limit(200);
