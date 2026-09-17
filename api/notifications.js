@@ -3,7 +3,7 @@ import { netlifyAdapter } from './_adapter.js';
 
 export async function mainHandler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
   try {
@@ -30,6 +30,17 @@ export async function mainHandler(req, res) {
         const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', user_id_all).eq('read', false);
         if (error) throw error;
       } else return res.status(400).json({ error: 'id or user_id_all required' });
+      return res.status(200).json({ ok: true });
+    }
+    if (req.method === 'DELETE') {
+      const { id, user_id } = req.body || {};
+      if (id) {
+        const { error } = await supabase.from('notifications').delete().eq('id', id);
+        if (error) throw error;
+      } else if (user_id) {
+        const { error } = await supabase.from('notifications').delete().eq('user_id', user_id);
+        if (error) throw error;
+      } else return res.status(400).json({ error: 'id or user_id required' });
       return res.status(200).json({ ok: true });
     }
     return res.status(405).json({ error: 'Method not allowed' });

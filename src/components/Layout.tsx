@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, CalendarCheck2, CalendarDays, Megaphone, MessagesSquare,
-  ClipboardList, Plane, MailWarning, Users, Bell, LogOut, Menu, X, CheckCheck, Settings as SettingsIcon,
+  ClipboardList, Plane, MailWarning, Users, Bell, LogOut, Menu, X, CheckCheck, Settings as SettingsIcon, Trash2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import type { Notif } from '../lib/types';
@@ -51,6 +51,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (!user) return;
     await api('/api/notifications', { method: 'PUT', body: { user_id_all: user.id } });
     fetchNotifs();
+  };
+
+  const deleteNotif = async (id: number) => {
+    try {
+      await api('/api/notifications', { method: 'DELETE', body: { id } });
+      fetchNotifs();
+    } catch (e: any) { alert('Failed to clear reminder: ' + e.message); }
+  };
+
+  const clearAllNotifs = async () => {
+    if (!user) return;
+    if (!confirm('Clear all notifications & reminders?')) return;
+    try {
+      await api('/api/notifications', { method: 'DELETE', body: { user_id: user.id } });
+      fetchNotifs();
+    } catch (e: any) { alert('Failed to clear reminders: ' + e.message); }
   };
 
   const openNotif = async (n: Notif) => {
@@ -154,19 +170,42 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <AnimatePresence>
                   {showNotif && (
                     <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                      className="fixed left-3 right-3 top-[68px] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[340px] bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden z-50">
+                      className="fixed left-3 right-3 top-[68px] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[350px] bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden z-50">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
-                        <p className="font-bold text-sm">Notifications</p>
-                        <button onClick={markAll} className="text-xs font-semibold text-zinc-500 hover:text-zinc-900 flex items-center gap-1"><CheckCheck size={14} /> Mark all read</button>
+                        <p className="font-bold text-sm">Notifications & Reminders</p>
+                        <div className="flex items-center gap-2">
+                          {notifs.some((n) => !n.read) && (
+                            <button onClick={markAll} title="Mark all read" className="text-xs font-semibold text-zinc-500 hover:text-zinc-900 flex items-center gap-1">
+                              <CheckCheck size={13} /> Read
+                            </button>
+                          )}
+                          {notifs.length > 0 && (
+                            <button onClick={clearAllNotifs} title="Clear all reminders" className="text-xs font-bold text-zinc-500 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded-lg transition flex items-center gap-1">
+                              <Trash2 size={13} /> Clear All
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="max-h-[380px] overflow-y-auto scroll-thin">
-                        {notifs.length === 0 && <p className="text-sm text-zinc-500 text-center py-8">No notifications yet</p>}
+                        {notifs.length === 0 && <p className="text-sm text-zinc-500 text-center py-8">No notifications or reminders 🎉</p>}
                         {notifs.map((n) => (
-                          <button key={n.id} onClick={() => openNotif(n)} className={`w-full text-left px-4 py-3 border-b border-zinc-50 hover:bg-zinc-50 transition ${!n.read ? 'bg-amber-50/60' : ''}`}>
-                            <p className="text-sm font-bold flex items-center gap-2">{KIND_ICON[n.kind] || '🔔'} {n.title}</p>
-                            <p className="text-xs text-zinc-600 mt-0.5 line-clamp-2">{n.body}</p>
-                            <p className="text-[11px] text-zinc-400 mt-1">{new Date(n.created_at).toLocaleString()}</p>
-                          </button>
+                          <div key={n.id} className={`group/n w-full flex items-start gap-2 px-4 py-3 border-b border-zinc-50 hover:bg-zinc-50 transition ${!n.read ? 'bg-amber-50/60' : ''}`}>
+                            <button onClick={() => openNotif(n)} className="flex-1 text-left min-w-0">
+                              <p className="text-sm font-bold flex items-center gap-2">{KIND_ICON[n.kind] || '🔔'} {n.title}</p>
+                              <p className="text-xs text-zinc-600 mt-0.5 line-clamp-2">{n.body}</p>
+                              <p className="text-[11px] text-zinc-400 mt-1">{new Date(n.created_at).toLocaleString()}</p>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNotif(n.id);
+                              }}
+                              title="Clear this reminder"
+                              className="opacity-0 group-hover/n:opacity-100 p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition shrink-0"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </motion.div>
