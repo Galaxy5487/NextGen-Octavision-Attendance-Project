@@ -99,7 +99,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {isHead ? 'Team Head' : user?.designation} · Settings
             </Link>
           </div>
-          <button onClick={logout} title="Sign out" className="p-2 rounded-lg text-zinc-500 hover:text-red-600 hover:bg-red-50 transition">
+          <button onClick={() => logout()} title="Sign out" className="p-2 rounded-lg text-zinc-500 hover:text-red-600 hover:bg-red-50 transition">
             <LogOut size={18} />
           </button>
         </div>
