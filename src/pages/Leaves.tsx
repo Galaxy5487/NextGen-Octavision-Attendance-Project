@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plane, Plus, Check, X, CalendarRange } from 'lucide-react';
+import { Plane, Plus, Check, X, CalendarRange, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { type LeaveRequest, type Profile } from '../lib/types';
@@ -59,6 +59,22 @@ export default function Leaves() {
     finally { setBusy(false); }
   };
 
+  const deleteLeave = async (id: number) => {
+    if (!confirm('Delete this leave request?')) return;
+    try {
+      await api('/api/leaves', { method: 'DELETE', body: { id } });
+      load();
+    } catch (e: any) { setMsg(e.message); }
+  };
+
+  const clearProcessed = async () => {
+    if (!confirm('Clear all decided/processed leave requests?')) return;
+    try {
+      await api('/api/leaves', { method: 'DELETE', body: { clear_processed: true } });
+      load();
+    } catch (e: any) { setMsg(e.message); }
+  };
+
   const name = (id: number) => people.find((p) => p.id === id);
   const pend = list.filter((l) => l.status === 'pending');
   const done = list.filter((l) => l.status !== 'pending');
@@ -80,6 +96,9 @@ export default function Leaves() {
             <p className="text-sm text-zinc-700 mt-2 leading-relaxed bg-zinc-50 rounded-xl p-3 border border-zinc-100">“{l.reason}”</p>
             <p className="text-[11px] text-zinc-400 mt-2">Requested {new Date(l.created_at).toLocaleString()}</p>
           </div>
+          <button onClick={() => deleteLeave(l.id)} title="Delete request" className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition">
+            <Trash2 size={16} />
+          </button>
         </div>
         {isHead && l.status === 'pending' && (
           <div className="flex gap-2 mt-4">
@@ -93,14 +112,21 @@ export default function Leaves() {
 
   return (
     <div className="space-y-4 sm:space-y-5 max-w-4xl">
-      <div className="flex items-start gap-3">
-        <div className="min-w-0">
+      <div className="flex items-start gap-3 flex-wrap">
+        <div className="min-w-0 flex-1">
           <h1 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2"><Plane size={22} /> Permission Leaves</h1>
           <p className="text-xs sm:text-sm text-zinc-500">{isHead ? 'Review requests — permitting auto-marks attendance as Permitted.' : 'Request time off — permitted leaves keep your score safe.'}</p>
         </div>
-        {!isHead && (
-          <button onClick={() => setShow(true)} className="ml-auto flex items-center justify-center gap-2 rounded-xl bg-zinc-900 text-white text-sm font-bold px-3 sm:px-4 py-2.5 hover:bg-zinc-700 shrink-0 min-h-[44px]"><Plus size={16} /> <span className="hidden sm:inline">Request Leave</span><span className="sm:hidden">Request</span></button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {done.length > 0 && (
+            <button onClick={clearProcessed} title="Clear processed leaves" className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-red-600 hover:bg-red-50 text-xs font-bold px-3 py-2.5 transition min-h-[44px]">
+              <Trash2 size={15} /> Clear Processed
+            </button>
+          )}
+          {!isHead && (
+            <button onClick={() => setShow(true)} className="flex items-center justify-center gap-2 rounded-xl bg-zinc-900 text-white text-sm font-bold px-3 sm:px-4 py-2.5 hover:bg-zinc-700 shrink-0 min-h-[44px]"><Plus size={16} /> <span className="hidden sm:inline">Request Leave</span><span className="sm:hidden">Request</span></button>
+          )}
+        </div>
       </div>
 
       {msg && <div className="rounded-xl border border-zinc-300 bg-zinc-50 text-sm font-semibold px-4 py-3">{msg}</div>}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MailWarning, Mail, Send, ChevronDown, BadgeCheck } from 'lucide-react';
+import { MailWarning, Mail, Send, ChevronDown, BadgeCheck, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { todayStr, type WarningLog, type Profile } from '../lib/types';
@@ -41,22 +41,48 @@ export default function Warnings() {
     finally { setBusy(false); }
   };
 
+  const delWarning = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    if (!confirm('Delete this warning log entry?')) return;
+    try {
+      await api('/api/warnings', { method: 'DELETE', body: { id } });
+      load();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const clearAllWarnings = async () => {
+    if (!confirm('Are you sure you want to clear warning history?')) return;
+    try {
+      await api('/api/warnings', { method: 'DELETE', body: { employee_id: isHead ? undefined : user!.id, clear_all: true } });
+      load();
+    } catch (err: any) { alert(err.message); }
+  };
+
   const emp = (id: number) => people.find((p) => p.id === id);
 
   if (loading) return <div className="flex justify-center py-24"><div className="animate-spin h-10 w-10 rounded-full border-4 border-zinc-200 border-t-zinc-900" /></div>;
 
   return (
     <div className="space-y-4 sm:space-y-5 max-w-4xl">
-      <div className="flex items-start gap-3">
-        <div className="min-w-0">
+      <div className="flex items-start gap-3 flex-wrap">
+        <div className="min-w-0 flex-1">
           <h1 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2"><MailWarning size={22} /> Warning Emails</h1>
           <p className="text-xs sm:text-sm text-zinc-500">
             {isHead ? 'Every absence emails the employee (full name + score) and posts a chat alert. Full log below.' : 'Warnings issued for your absences. Each email shows your full name and score.'}
           </p>
         </div>
-        {isHead && (
-          <button onClick={() => setShow(true)} className="ml-auto flex items-center justify-center gap-2 rounded-xl bg-red-600 text-white text-sm font-bold px-3 sm:px-4 py-2.5 hover:bg-red-700 shrink-0 min-h-[44px]"><Send size={15} /> <span className="hidden sm:inline">Send Warning</span><span className="sm:hidden">Warn</span></button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {logs.length > 0 && (
+            <button onClick={clearAllWarnings} title="Clear warning history" className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-red-600 hover:bg-red-50 text-xs font-bold px-3 py-2.5 transition min-h-[44px]">
+              <Trash2 size={15} /> Clear History
+            </button>
+          )}
+          {isHead && (
+            <button onClick={() => setShow(true)} className="flex items-center justify-center gap-2 rounded-xl bg-red-600 text-white text-sm font-bold px-3 sm:px-4 py-2.5 hover:bg-red-700 shrink-0 min-h-[44px]">
+              <Send size={15} /> <span className="hidden sm:inline">Send Warning</span><span className="sm:hidden">Warn</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -85,7 +111,7 @@ export default function Warnings() {
             const isOpen = open === w.id;
             return (
               <motion.div key={w.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-                <button onClick={() => setOpen(isOpen ? null : w.id)} className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 text-left hover:bg-zinc-50 transition">
+                <div onClick={() => setOpen(isOpen ? null : w.id)} className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 text-left hover:bg-zinc-50 transition cursor-pointer select-none">
                   <span className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><MailWarning size={18} className="text-red-600" /></span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold truncate">{w.subject}</p>
@@ -94,8 +120,11 @@ export default function Warnings() {
                   <span className={`hidden sm:inline-block text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${w.email_status === 'sent' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                     {w.email_status === 'sent' ? '✉️ SENT' : '📝 LOGGED'}
                   </span>
+                  <button onClick={(e) => delWarning(e, w.id)} title="Delete warning log" className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition">
+                    <Trash2 size={16} />
+                  </button>
                   <ChevronDown size={17} className={`shrink-0 text-zinc-400 transition ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
+                </div>
                 <AnimatePresence>
                   {isOpen && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Megaphone, Send, Trash2, Palmtree, Briefcase, Info } from 'lucide-react';
+import { Megaphone, Send, Trash2, Palmtree, Briefcase, Info, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { fmtTime, type Announcement, type Profile } from '../lib/types';
@@ -20,6 +20,13 @@ export default function Announcements() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
+  const [dismissed, setDismissed] = useState<number[]>([]);
+
+  const hideAnnouncement = (id: number) => {
+    setDismissed((prev) => [...prev, id]);
+  };
+
+  const filteredList = list.filter((a) => !dismissed.includes(a.id));
 
   const load = async () => {
     try {
@@ -73,11 +80,11 @@ export default function Announcements() {
 
       {loading ? (
         <div className="flex justify-center py-16"><div className="animate-spin h-8 w-8 rounded-full border-4 border-zinc-200 border-t-zinc-900" /></div>
-      ) : list.length === 0 ? (
-        <p className="text-center text-zinc-500 py-12">No announcements yet.</p>
+      ) : filteredList.length === 0 ? (
+        <p className="text-center text-zinc-500 py-12">No announcements visible.</p>
       ) : (
         <div className="space-y-3">
-          {list.map((a, i) => {
+          {filteredList.map((a, i) => {
             const ks = KIND_STYLE[a.kind] || KIND_STYLE.general;
             const Icon = ks.icon;
             return (
@@ -93,9 +100,16 @@ export default function Announcements() {
                     <p className="text-sm text-zinc-600 mt-1.5 whitespace-pre-wrap leading-relaxed">{a.body}</p>
                     <p className="text-[11px] text-zinc-400 mt-2">By {byName(a.created_by)} · {fmtTime(a.created_at)}</p>
                   </div>
-                  {isHead && (
-                    <button onClick={() => del(a.id)} className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={16} /></button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => hideAnnouncement(a.id)} title="Hide/Dismiss announcement" className="p-2 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition">
+                      <EyeOff size={16} />
+                    </button>
+                    {isHead && (
+                      <button onClick={() => del(a.id)} title="Delete announcement for all" className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             );
