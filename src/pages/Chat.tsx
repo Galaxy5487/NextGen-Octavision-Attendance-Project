@@ -30,21 +30,22 @@ export default function Chat() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadThreads = async () => {
-    if (!user?.id) return;
     try {
-      const [t, p] = await Promise.all([
-        api<Thread[]>(`/api/threads?user_id=${user.id}`),
-        api<Profile[]>('/api/employees'),
-      ]);
-      setThreads(t || []);
+      // Always fetch employee profiles first so contacts list is ready
+      const p = await api<Profile[]>('/api/employees').catch(() => []);
       const activePeople = (p || []).filter((x) => x.active !== false);
       setPeople(activePeople);
 
-      // Auto-select first thread on initial desktop load if no active thread
-      setActive((current) => {
-        if (current === null && (t || []).length > 0) return t[0].id;
-        return current;
-      });
+      if (user?.id) {
+        const t = await api<Thread[]>(`/api/threads?user_id=${user.id}`).catch(() => []);
+        setThreads(t || []);
+
+        // Auto-select first thread on initial desktop load if no active thread
+        setActive((current) => {
+          if (current === null && (t || []).length > 0) return t[0].id;
+          return current;
+        });
+      }
     } catch (e) {
       console.error('Failed loading chat data:', e);
     } finally {
