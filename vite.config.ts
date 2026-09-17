@@ -8,8 +8,22 @@ function apiDevServerPlugin(): Plugin {
   return {
     name: 'api-dev-server',
     configureServer(server) {
-      // Ensure process.env has vercel.json & .env env vars
+      // Ensure process.env has .env.local & vercel.json env vars
       try {
+        const envLocalPath = path.resolve(process.cwd(), '.env.local');
+        if (fs.existsSync(envLocalPath)) {
+          const lines = fs.readFileSync(envLocalPath, 'utf-8').split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+            const idx = trimmed.indexOf('=');
+            if (idx > 0) {
+              const k = trimmed.slice(0, idx).trim();
+              const v = trimmed.slice(idx + 1).trim();
+              if (!process.env[k]) process.env[k] = v;
+            }
+          }
+        }
         const vercelJsonPath = path.resolve(process.cwd(), 'vercel.json');
         if (fs.existsSync(vercelJsonPath)) {
           const vercelJson = JSON.parse(fs.readFileSync(vercelJsonPath, 'utf-8'));
