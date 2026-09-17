@@ -131,7 +131,7 @@ export function warningEmail(empName, dateStr, score, counts) {
 export async function trySendEmail(to, subject, text) {
   const key = process.env.BREVO_API_KEY;
   if (!key) return 'logged';
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'nextgenoctavision@gmail.com';
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'octavisionteam@gmail.com';
   const smtpUser = process.env.BREVO_SMTP_USER || senderEmail;
   const safe = String(text || '').replace(/</g, '&lt;');
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden">` +
