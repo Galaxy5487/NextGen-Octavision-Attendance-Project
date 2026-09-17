@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import type { Notif } from '../lib/types';
 import UserAvatar from './UserAvatar';
 import { api } from '../lib/api';
+import DeltaChatBot from './DeltaChatBot';
 
 const NAV = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -206,6 +207,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </nav>
+      <DeltaChatBot />
     </div>
   );
 }
