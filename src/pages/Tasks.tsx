@@ -47,6 +47,13 @@ export default function Tasks() {
     await api('/api/tasks', { method: 'DELETE', body: { id } });
     load();
   };
+  const clearDone = async () => {
+    if (!confirm('Clear all completed tasks?')) return;
+    try {
+      await api('/api/tasks', { method: 'DELETE', body: { clear_done: true, assignee_id: isHead ? undefined : user!.id } });
+      load();
+    } catch (e: any) { alert(e.message); }
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.assignee_id) return;
@@ -62,19 +69,27 @@ export default function Tasks() {
 
   const name = (id: number) => people.find((p) => p.id === id)?.full_name || `#${id}`;
   const overdue = (t: Task) => t.due_date && t.due_date < todayStr() && t.status !== 'done';
+  const hasDone = tasks.some((t) => t.status === 'done');
 
   if (loading) return <div className="flex justify-center py-24"><div className="animate-spin h-10 w-10 rounded-full border-4 border-zinc-200 border-t-zinc-900" /></div>;
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start gap-3">
-        <div className="min-w-0">
+      <div className="flex items-start gap-3 flex-wrap">
+        <div className="min-w-0 flex-1">
           <h1 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2"><ClipboardList size={22} /> {isHead ? 'Tasks' : 'My Tasks'}</h1>
           <p className="text-xs sm:text-sm text-zinc-500">{isHead ? 'Assign work — especially improvement tasks for low scorers.' : 'Work assigned by your team head.'}</p>
         </div>
-        {isHead && (
-          <button onClick={() => setShow(true)} className="ml-auto flex items-center justify-center gap-2 rounded-xl bg-zinc-900 text-white text-sm font-bold px-3 sm:px-4 py-2.5 hover:bg-zinc-700 shrink-0 min-h-[44px]"><Plus size={16} /> <span className="hidden sm:inline">Assign Task</span><span className="sm:hidden">Assign</span></button>
-        )}
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          {hasDone && (
+            <button onClick={clearDone} title="Clear all completed tasks" className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-red-600 hover:bg-red-50 text-xs font-bold px-3 py-2.5 transition min-h-[44px]">
+              <Trash2 size={15} /> Clear Completed
+            </button>
+          )}
+          {isHead && (
+            <button onClick={() => setShow(true)} className="flex items-center justify-center gap-2 rounded-xl bg-zinc-900 text-white text-sm font-bold px-3 sm:px-4 py-2.5 hover:bg-zinc-700 shrink-0 min-h-[44px]"><Plus size={16} /> <span className="hidden sm:inline">Assign Task</span><span className="sm:hidden">Assign</span></button>
+          )}
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4 items-start">
@@ -91,7 +106,7 @@ export default function Tasks() {
                   <motion.div key={t.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`bg-white rounded-xl border p-3.5 shadow-sm ${overdue(t) ? 'border-red-300' : 'border-zinc-200'}`}>
                     <div className="flex items-start gap-2">
                       <p className="font-bold text-sm flex-1">{t.title}</p>
-                      {isHead && <button onClick={() => del(t.id)} className="text-zinc-300 hover:text-red-600"><Trash2 size={14} /></button>}
+                      <button onClick={() => del(t.id)} title="Delete task" className="text-zinc-300 hover:text-red-600 p-1 rounded transition shrink-0"><Trash2 size={14} /></button>
                     </div>
                     {t.description && <p className="text-xs text-zinc-600 mt-1 leading-relaxed">{t.description}</p>}
                     <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">

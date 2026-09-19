@@ -40,7 +40,12 @@ export async function mainHandler(req, res) {
       return res.status(201).json(data);
     }
     if (req.method === 'DELETE') {
-      const { id } = req.body || {};
+      const { id, clear_all } = req.body || {};
+      if (clear_all) {
+        const { error } = await supabase.from('announcements').delete().gte('id', 0);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
       if (!id) return res.status(400).json({ error: 'id required' });
       const { error } = await supabase.from('announcements').delete().eq('id', id);
       if (error) throw error;

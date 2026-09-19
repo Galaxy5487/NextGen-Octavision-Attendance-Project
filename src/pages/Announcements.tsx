@@ -55,13 +55,30 @@ export default function Announcements() {
     load();
   };
 
+  const clearAllAnnouncements = async () => {
+    if (!confirm('Clear all announcements for the team?')) return;
+    try {
+      await api('/api/announcements', { method: 'DELETE', body: { clear_all: true } });
+      load();
+    } catch (e: any) {
+      alert('Failed to clear announcements: ' + e.message);
+    }
+  };
+
   const byName = (id: number | null) => people.find((p) => p.id === id)?.full_name || 'Team Head';
 
   return (
     <div className="space-y-4 sm:space-y-5 max-w-4xl">
-      <div>
-        <h1 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2"><Megaphone size={22} /> Announcements</h1>
-        <p className="text-sm text-zinc-500">{isHead ? 'Broadcast to the whole team — everyone gets notified.' : 'Updates from your team head.'}</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2"><Megaphone size={22} /> Announcements</h1>
+          <p className="text-sm text-zinc-500">{isHead ? 'Broadcast to the whole team — everyone gets notified.' : 'Updates from your team head.'}</p>
+        </div>
+        {isHead && list.length > 0 && (
+          <button onClick={clearAllAnnouncements} title="Clear all announcements" className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-red-600 hover:bg-red-50 text-xs font-bold px-3 py-2.5 transition min-h-[44px] shrink-0">
+            <Trash2 size={15} /> Clear All
+          </button>
+        )}
       </div>
 
       {isHead && (
