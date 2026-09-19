@@ -134,6 +134,7 @@ export async function trySendEmail(to, subject, text) {
   const senderEmail = process.env.BREVO_SENDER_EMAIL || 'octavisionteam@gmail.com';
   const smtpUser = process.env.BREVO_SMTP_USER || senderEmail;
   const logoUrl = 'https://nextgen-octavision.netlify.app/logo.png';
+  const safe = String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05)">` +
     `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#09090b;padding:20px 24px">` +
     `<tr>` +
